@@ -1,0 +1,143 @@
+{
+  "meta": {
+    "total_respostas": 21,
+    "plataforma": "Tally Forms",
+    "periodo": "2026-05-10 a 2026-05-11",
+    "perguntas": 12,
+    "observacao_idade": "As 4 primeiras respostas foram registradas antes de o campo de idade entrar no formulário; por isso a média considera apenas 18 participantes."
+  },
+  "perfil": {
+    "tipo_gas": {
+      "Botijão de Gás": 18,
+      "Gás encanado": 3
+    },
+    "frequencia_uso": {
+      "Várias vezes ao dia": 18,
+      "Uma vez ao dia": 3
+    },
+    "idade": {
+      "respondentes_com_idade": 18,
+      "media": 23.6,
+      "mediana": 21.0,
+      "min": 19,
+      "max": 54
+    }
+  },
+  "vazamentos": {
+    "ja_presenciou": {
+      "Sim": 11,
+      "Não": 7,
+      "Não tenho certeza ou não me recordo": 3
+    },
+    "possui_detector": {
+      "Não": 20,
+      "Pretendo adquirir": 1
+    }
+  },
+  "deteccao": {
+    "formas": {
+      "Pelo cheiro": 21,
+      "Mudança na chama do fogão": 2,
+      "Pelo som do vazamento": 1,
+      "Outro": 1
+    },
+    "cheiro_suficiente": {
+      "Depende da situação": 10,
+      "Não": 7,
+      "Sim": 4
+    }
+  },
+  "preferencias_alerta": {
+    "tipo_alerta": {
+      "Combinação de todos os elementos": 8,
+      "Som": 6,
+      "Combinação de som e luz": 5,
+      "Mensagem em tela": 1,
+      "Luz": 1
+    },
+    "importancia_ouvido_outros_comodos": {
+      "Muito importante": 17,
+      "Importante": 3,
+      "Pouco importante": 1
+    },
+    "utilidade_botao_silenciar": {
+      "Sim": 15,
+      "Talvez": 5,
+      "Não": 1
+    }
+  },
+  "instalacao": {
+    "locais": {
+      "Na cozinha em geral": 13,
+      "Próximo ao botijão": 8,
+      "Próximo ao fogão": 6,
+      "Em vários cômodos": 3,
+      "Próximo ao teto": 2
+    }
+  },
+  "caracteristicas": {
+    "prioridades": {
+      "Facilidade de instalação": 17,
+      "Aviso sonoro": 15,
+      "Baixo custo": 12,
+      "Integração com celular": 12,
+      "Simplicidade": 10,
+      "Tamanho reduzido": 10,
+      "Baixo consumo de energia": 10,
+      "Aviso visual": 7
+    }
+  },
+  "indicadores": {
+    "usam_botijao_pct": 85.7,
+    "usam_botijao_n": 18,
+    "usam_varias_vezes_dia_pct": 85.7,
+    "usam_varias_vezes_dia_n": 18,
+    "ja_presenciou_vazamento_pct": 52.4,
+    "ja_presenciou_vazamento_n": 11,
+    "nao_possui_detector_pct": 95.2,
+    "nao_possui_detector_n": 20,
+    "pretende_adquirir_n": 1,
+    "identificam_pelo_cheiro_pct": 100.0,
+    "identificam_pelo_cheiro_n": 21,
+    "cheiro_nao_basta_pct": 81.0,
+    "cheiro_nao_basta_n": 17,
+    "querem_ouvir_outros_comodos_pct": 95.2,
+    "querem_ouvir_outros_comodos_n": 20,
+    "acham_muito_importante_ouvir_pct": 81.0,
+    "botao_silenciar_util_pct": 71.4,
+    "botao_silenciar_util_n": 15,
+    "preferem_combinacao_alerta_pct": 61.9,
+    "media_locais_por_pessoa": 1.5,
+    "top_local": "Na cozinha em geral",
+    "top_local_pct": 61.9,
+    "top_caracteristicas": [
+      [
+        "Facilidade de instalação",
+        17
+      ],
+      [
+        "Aviso sonoro",
+        15
+      ],
+      [
+        "Baixo custo",
+        12
+      ],
+      [
+        "Integração com celular",
+        12
+      ]
+    ]
+  },
+  "narrativa": {
+    "relato": "Uma moradora relatou dificuldade para perceber o cheiro de gás. Houve um vazamento no fogão de sua residência que ficou sem ser identificado por um período, e só foi percebido quando o técnico foi trocar o botijão.",
+    "problema": "A identificação de vazamentos depende quase inteiramente do olfato humano — justamente o sentido que falha em idosos, pessoas com limitações sensoriais ou em momentos de distração.",
+    "decisao_projeto": [
+      "alerta redundante: som + luz + texto, porque a maioria quer combinação e aviso audível em outros cômodos;",
+      "botão de silenciamento, porque a maioria considerou a função útil;",
+      "instalação perto do fogão e do botijão, os locais mais citados;",
+      "baixo custo e facilidade de instalação, as características mais valorizadas;",
+      "notificação por celular ficou de fora do escopo por custo e complexidade (registrado como limitação)."
+    ]
+  }
+}
