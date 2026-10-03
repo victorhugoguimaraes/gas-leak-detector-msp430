@@ -12,6 +12,7 @@
 | Usam o fogão várias vezes ao dia | **86%** (18 de 21) |
 | Já presenciaram ou suspeitaram de vazamento | **52%** (11 de 21) |
 | **Não** possuem detector automático | **95%** (20 de 21) |
+| Nenhuma instalação de detector na amostra | **21 de 21** (os 20 que responderam *Não* + 1 que respondeu *Pretendo adquirir*) |
 | Identificariam vazamento **pelo cheiro** | **100%** (21 de 21) |
 | Dizem que só o cheiro **não basta** em toda situação | **81%** (17 de 21) |
 | Querem ouvir o alarme em outros cômodos | **95%** |

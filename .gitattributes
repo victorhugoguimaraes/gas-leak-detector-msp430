@@ -1,0 +1,14 @@
+# Normaliza o fim de linha no repositório.
+# Sem isto, o Git no Windows converte LF para CRLF e o checkout fica diferente
+# do que foi commitado (o que aparece como "arquivo modificado" sem ninguém
+# ter mudado nada). Aqui o repositório é sempre LF.
+* text=auto eol=lf
+
+# Binários: nunca normalizar
+*.png binary
+*.jpg binary
+*.pdf binary
+*.svg text eol=lf
+*.exe binary
+*.hex binary
+*.elf binary

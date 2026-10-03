@@ -57,7 +57,10 @@ desktop.ini
 
 # ---------------------------------------------------------------
 # Binários de simulador compilados no PC
+# (os logs em firmware/build/ ficam versionados como evidência dos testes;
+#  os executáveis não, por serem específicos de plataforma)
 # ---------------------------------------------------------------
 firmware/sim/simulador
 firmware/sim/testes
-firmware/sim/*.exe
+*.exe
+*.dll

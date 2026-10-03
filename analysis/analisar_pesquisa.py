@@ -311,6 +311,11 @@ def analisar(df: pd.DataFrame) -> dict:
         "nao_possui_detector_pct": pct(n - possui_sim - pretende, n),
         "nao_possui_detector_n": n - possui_sim - pretende,
         "pretende_adquirir_n": pretende,
+        # Leitura correta do bloco: 20 responderam "Não" e 1 respondeu
+        # "Pretendo adquirir". Ninguem da amostra tem detector instalado,
+        # entao a frase honesta e "nenhuma instalacao ativa".
+        "sem_detector_algum_pct": pct(n - possui_sim, n),
+        "sem_detector_algum_n": n - possui_sim,
         "identificam_pelo_cheiro_pct": pct(cheiro, n),
         "identificam_pelo_cheiro_n": cheiro,
         "cheiro_nao_basta_pct": pct(cheiro_depende, soma_cheiro),
@@ -321,6 +326,8 @@ def analisar(df: pd.DataFrame) -> dict:
         "botao_silenciar_util_pct": pct(botao_sim, sum(botao.values())),
         "botao_silenciar_util_n": botao_sim,
         "preferem_combinacao_alerta_pct": pct(combinacao, sum(dados["preferencias_alerta"]["tipo_alerta"].values())),
+        "preferem_combinacao_alerta_n": combinacao,
+        "total_tipo_alerta": sum(dados["preferencias_alerta"]["tipo_alerta"].values()),
         "media_locais_por_pessoa": round(total_locais / n, 1) if n else 0,
         "top_local": next(iter(locais), None),
         "top_local_pct": pct(locais[next(iter(locais))], n) if locais else 0,
@@ -505,6 +512,10 @@ def gerar_markdown(dados: dict, arquivos: list) -> str:
     add(f"| **Não** possuem detector automático | "
         f"**{i['nao_possui_detector_pct']:.0f}%** "
         f"({i['nao_possui_detector_n']} de {n}) |")
+    add(f"| Nenhuma instalação de detector na amostra | "
+        f"**{i['sem_detector_algum_n']} de {n}** "
+        f"(os {i['nao_possui_detector_n']} que responderam *Não* + "
+        f"{i['pretende_adquirir_n']} que respondeu *Pretendo adquirir*) |")
     add(f"| Identificariam vazamento **pelo cheiro** | "
         f"**{i['identificam_pelo_cheiro_pct']:.0f}%** "
         f"({i['identificam_pelo_cheiro_n']} de {n}) |")

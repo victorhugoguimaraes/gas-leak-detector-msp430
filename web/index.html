@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detector de vazamento de gás com MSP430 · Victor Hugo e Davi Sousa</title>
+<meta name="description" content="Projeto final de Laboratório de Sistemas Microprocessados (UnB): detector de vazamento de gás com MSP430F5529LP, sensor MQ-2, LCD 16x2, buzzer e botão de silenciamento — com simulador interativo e pesquisa de campo real.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b1f2a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1f2a'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f2a71b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/estilo.css">
+<script src="js/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#simulador">Ir para o simulador</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#topo">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="brand-name">Detector de vazamento de gás</span>
+      <span class="brand-sub">MSP430F5529LP</span>
+    </a>
+    <nav class="topnav" aria-label="Seções da página">
+      <a href="#simulador">Simulador</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#pesquisa">Pesquisa</a>
+      <a href="#codigo" data-opt2>Código</a>
+      <a href="#limitacoes" data-opt>Limitações</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page" id="topo">
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-text">
+        <h1>Detector de Vazamento de Gás com MSP430</h1>
+        <p class="lede">
+          Um alarme que não depende do seu olfato. O sensor MQ-2 sente o gás, o
+          MSP430F5529LP decide e o aviso sai em três frentes ao mesmo tempo:
+          som, luz e texto no LCD 16×2.
+        </p>
+
+        <ul class="chips">
+          <li>MSP430F5529LP</li>
+          <li>ADC12</li>
+          <li>I2C</li>
+          <li>PWM</li>
+          <li>MQ-2 · entrada analógica</li>
+        </ul>
+
+        <dl class="facts">
+          <div>
+            <dt>limiar de decisão</dt>
+            <dd>1500 de 4095</dd>
+          </div>
+          <div>
+            <dt>pesquisa de campo</dt>
+            <dd>21 respostas</dd>
+          </div>
+          <div>
+            <dt>custo estimado</dt>
+            <dd>R$ 205 – 235</dd>
+          </div>
+        </dl>
+
+        <p class="hero-links">
+          <a class="btn-link" href="#simulador">Testar o simulador</a>
+          <a class="link-quiet" href="#codigo">Ver o trecho de firmware</a>
+        </p>
+      </div>
+
+      <div>
+        <div class="device">
+          <div class="lcd" id="lcd-hero" data-estado="seguro">
+            <div class="lcd-glass">
+              <div class="lcd-row" data-lcd-row="0">Nivel Gas: 0312</div>
+              <div class="lcd-row" data-lcd-row="1">Ambiente Seguro</div>
+            </div>
+          </div>
+          <div class="bezel-note">
+            <span>16×2 · I²C 0x27</span>
+            <span>demo automática · sem áudio</span>
+          </div>
+          <div class="panel-row">
+            <span class="ind">
+              <span class="led is-safe" id="hero-led" aria-hidden="true"></span>
+              LED1 · P1.0
+            </span>
+            <span class="ind">
+              <svg class="buzzer" id="hero-buzzer" viewBox="0 0 24 20" role="img" aria-label="Buzzer">
+                <path class="cone" d="M3 7h3l5-4v14l-5-4H3z"></path>
+                <path class="wave wave-1" d="M14.5 6.5a5 5 0 0 1 0 7"></path>
+                <path class="wave wave-2" d="M17.5 4a8.5 8.5 0 0 1 0 12"></path>
+              </svg>
+              Buzzer · P2.4 · 1 kHz
+            </span>
+          </div>
+        </div>
+        <p class="device-caption">
+          A sequência acima é a do próprio firmware: leitura subindo até passar de
+          1500 e disparar o alerta. Nada de áudio aqui — o buzzer só toca no
+          simulador, depois de você interagir.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SIMULADOR ================= -->
+  <section class="sec sim" id="simulador">
+    <div class="wrap sec-grid">
+      <p class="rail">A0 · entrada analógica<span>leitura crua do ADC12</span></p>
+
+      <div class="sec-body">
+        <div class="sec-head">
+          <h2>O firmware na sua mão</h2>
+          <p>
+            O controle abaixo é o valor bruto do ADC12: de 0 a 4095. Acima de 1500
+            o firmware trata como vazamento e aciona buzzer, LED e a segunda linha
+            do LCD. Abaixo, volta a “ambiente seguro” e rearma o silenciamento.
+            É a mesma regra do código que roda na placa.
+          </p>
+        </div>
+
+        <div class="sim-panel">
+          <div class="lcd" id="lcd-sim" data-estado="seguro">
+            <div class="lcd-glass">
+              <div class="lcd-row" data-lcd-row="0">Nivel Gas: 0380</div>
+              <div class="lcd-row" data-lcd-row="1">Ambiente Seguro</div>
+            </div>
+          </div>
+
+          <div class="panel-row">
+            <span class="ind">
+              <span class="led is-safe" id="sim-led" aria-hidden="true"></span>
+              LED1 · P1.0 <span class="ind-state" id="sim-led-estado">apagado</span>
+            </span>
+            <span class="ind">
+              <svg class="buzzer" id="sim-buzzer" viewBox="0 0 24 20" role="img" aria-label="Buzzer">
+                <path class="cone" d="M3 7h3l5-4v14l-5-4H3z"></path>
+                <path class="wave wave-1" d="M14.5 6.5a5 5 0 0 1 0 7"></path>
+                <path class="wave wave-2" d="M17.5 4a8.5 8.5 0 0 1 0 12"></path>
+              </svg>
+              Buzzer · P2.4 <span class="ind-state" id="sim-buzzer-estado">mudo</span>
+            </span>
+          </div>
+
+          <dl class="readouts">
+            <div class="readout">
+              <dt>leitura do ADC</dt>
+              <dd><span id="sim-leitura">0380</span><span class="unit">/ 4095</span></dd>
+            </div>
+            <div class="readout" data-alerta>
+              <dt>relativo ao limiar</dt>
+              <dd id="sim-percentual">25%</dd>
+            </div>
+            <div class="readout" data-alerta>
+              <dt>decisão do firmware</dt>
+              <dd id="sim-decisao" style="font-size:1rem">abaixo do limiar</dd>
+            </div>
+          </dl>
+
+          <div class="gauge">
+            <div class="gauge-track">
+              <div class="gauge-fill" id="gauge-fill"></div>
+              <div class="gauge-mark" aria-hidden="true"></div>
+            </div>
+            <div class="gauge-scale">
+              <span>0</span>
+              <span class="mid">limiar 1500</span>
+              <span>4095</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <input class="slider" type="range" id="adc" min="0" max="4095" step="1" value="380"
+                   aria-label="Leitura do ADC do sensor MQ-2"
+                   aria-describedby="sim-ajuda">
+            <p class="help" id="sim-ajuda">
+              Arraste o controle ou use as setas ← → do teclado. <kbd>Home</kbd> e
+              <kbd>End</kbd> vão aos extremos.
+            </p>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-mute" id="btn-mute" aria-pressed="false" disabled>
+              Silenciar buzzer
+            </button>
+            <p class="help" id="mute-ajuda" style="flex:1 1 240px">
+              O botão só silencia; quem rearma o alarme é a própria leitura cair
+              abaixo de 1500.
+            </p>
+            <div class="scenarios">
+              <span class="kicker">cenários</span>
+              <button type="button" class="btn btn-ghost scenario" data-value="320">ar limpo · 0320</button>
+              <button type="button" class="btn btn-ghost scenario" data-value="1290">atenção · 1290</button>
+              <button type="button" class="btn btn-ghost scenario" data-value="2410">vazamento · 2410</button>
+            </div>
+          </div>
+
+          <p class="audio-note">
+            <span aria-hidden="true">🔊</span>
+            <span>
+              <strong>O som só começa depois de um gesto seu.</strong>
+              Ao abrir a página o silêncio é absoluto: o contexto de áudio nem é
+              criado. Ele nasce no primeiro clique ou tecla dentro deste painel, e
+              só soa quando a leitura passa de 1500 — com o tom de ~1 kHz do
+              firmware (o TA2.1 no P2.4), de forma intermitente. O botão
+              <em>Silenciar buzzer</em> corta o som na hora.
+            </span>
+          </p>
+
+          <p class="status-live" id="sim-status" role="status" aria-live="polite">
+            Leitura 0380: ambiente seguro, buzzer desligado.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMO FUNCIONA ================= -->
+  <section class="sec" id="como-funciona" style="padding-block:clamp(72px,8vw,120px)">
+    <div class="wrap sec-grid">
+      <p class="rail">do sensor à saída<span>quatro etapas</span></p>
+
+      <div class="sec-body">
+        <div class="sec-head">
+          <h2>Como o alarme decide</h2>
+          <p>
+            O caminho é sempre o mesmo, repetido centenas de vezes por segundo em um
+            laço simples — sem sistema operacional, sem biblioteca de terceiros.
+          </p>
+        </div>
+
+        <p class="visually-hidden">
+          Caminho do sinal: o sensor MQ-2 entrega de 0 a 3,3 volts ao ADC12, que
+          entrega de 0 a 4095 à decisão no MSP430. A decisão aciona LCD, buzzer e
+          LED, e o botão na P2.1 silencia o buzzer por interrupção.
+        </p>
+
+        <div class="flow">
+          <div class="node">
+            <span class="node-name">MQ-2</span>
+            <span class="node-sub">sensor de gás, saída analógica</span>
+          </div>
+          <div class="link" aria-hidden="true"><span>0–3,3 V</span></div>
+          <div class="node">
+            <span class="node-name">ADC12</span>
+            <span class="node-sub">canal A0, 12 bits por amostra</span>
+          </div>
+          <div class="link" aria-hidden="true"><span>0–4095</span></div>
+          <div class="node">
+            <span class="node-name">Decisão no MSP430</span>
+            <span class="node-sub">compara com o limiar 1500</span>
+          </div>
+          <div class="link" aria-hidden="true"><span>I²C · TA2.1 · GPIO</span></div>
+          <div class="outs">
+            <div class="node">
+              <span class="node-name">LCD 16×2</span>
+              <span class="node-sub">leitura e estado, por I²C 0x27</span>
+            </div>
+            <div class="node">
+              <span class="node-name">Buzzer</span>
+              <span class="node-sub">tom de ~1 kHz no P2.4 pelo Timer A2</span>
+            </div>
+            <div class="node">
+              <span class="node-name">LED1</span>
+              <span class="node-sub">aceso enquanto há alarme</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="feedback">
+          <strong>Volta:</strong> o botão na P2.1 gera interrupção e só marca
+          “silenciado”. Quem devolve o sistema ao estado armado é a leitura voltar
+          para 1500 ou menos — evitando que alguém desligue o alarme e esqueça.
+        </p>
+
+        <div class="cards" style="margin-top:40px">
+          <article class="card">
+            <span class="tag">analógico</span>
+            <h3>O sensor sente</h3>
+            <p>
+              O MQ-2 aquece um elemento de dióxido de estanho. Quanto mais gás no
+              ar, menor a resistência e maior a tensão na saída analógica — uma
+              faixa contínua, não um simples “tem ou não tem”.
+            </p>
+          </article>
+          <article class="card">
+            <span class="tag">12 bits</span>
+            <h3>O ADC traduz</h3>
+            <p>
+              O ADC12 do MSP430 lê essa tensão no canal A0 e devolve um inteiro de
+              0 a 4095. Ar limpo fica na casa das centenas; uma nuvem de gás de
+              cozinha perto do sensor passa de 2000 sem esforço.
+            </p>
+          </article>
+          <article class="card">
+            <span class="tag">limiar 1500</span>
+            <h3>O firmware decide</h3>
+            <p>
+              A cada volta do laço a leitura é comparada com 1500. Acima, o alarme
+              liga; abaixo, desliga e rearma o silenciamento. O limiar é prático,
+              ajustado em bancada — não é uma medida de concentração em ppm.
+            </p>
+          </article>
+          <article class="card">
+            <span class="tag">som + luz + texto</span>
+            <h3>O aviso sai em três frentes</h3>
+            <p>
+              LCD, buzzer e LED ao mesmo tempo, porque a pesquisa de campo mostrou
+              que é a combinação que as pessoas percebem melhor — e o alarme
+              precisa ser ouvido de outro cômodo, não só na cozinha.
+            </p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HARDWARE ================= -->
+  <section class="sec" id="hardware" style="padding-block:clamp(72px,8vw,120px)">
+    <div class="wrap sec-grid">
+      <p class="rail">lista de materiais<span>protótipo de bancada</span></p>
+
+      <div class="sec-body">
+        <div class="sec-head">
+          <h2>Hardware e custo</h2>
+          <p>
+            Tudo foi montado sobre a própria LaunchPad e uma protoboard: nenhuma
+            placa foi fabricada, nenhum componente soldado fora dos módulos. A
+            conexão do LCD é I²C, o que economiza pinos do MSP430.
+          </p>
+        </div>
+
+        <div class="tables">
+          <div>
+            <h3 style="font-size:var(--step-1);margin-bottom:14px">Pinagem usada</h3>
+            <div class="table-wrap">
+              <table>
+                <caption>Pinos do MSP430F5529LP no protótipo. O LED1 e o botão já vêm na LaunchPad.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Pino</th>
+                    <th scope="col">Função no projeto</th>
+                    <th scope="col">Ligado a</th>
+                    <th scope="col">Observação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="pin">P6.0 / A0</span></td>
+                    <td>entrada analógica</td>
+                    <td>saída AO do módulo MQ-2</td>
+                    <td>o módulo pode ir a 5 V; o divisor 10 kΩ/18 kΩ entrega até ≈3,21 V</td>
+                  </tr>
+                  <tr>
+                    <td><span class="pin">P3.0</span></td>
+                    <td>SDA do barramento I²C</td>
+                    <td>backpack I²C do LCD 16×2</td>
+                    <td>endereço 0x27, pull-ups no módulo</td>
+                  </tr>
+                  <tr>
+                    <td><span class="pin">P3.1</span></td>
+                    <td>SCL do barramento I²C</td>
+                    <td>backpack I²C do LCD 16×2</td>
+                    <td>SCL em ~620 Hz (UCB0BRW = 105 no firmware)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="pin">P2.4</span></td>
+                    <td>tom do buzzer</td>
+                    <td>buzzer passivo</td>
+                    <td>~1 kHz pelo Timer A2 (canal TA2.1, duty de 50%)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="pin">P1.0</span></td>
+                    <td>LED de alarme</td>
+                    <td>LED1 da LaunchPad</td>
+                    <td>aceso enquanto houver risco (mesmo com o som silenciado)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="pin">P2.1</span></td>
+                    <td>botão de silenciamento</td>
+                    <td>botão de usuário da LaunchPad</td>
+                    <td>pull-up interno, interrupção de porta (P2IV = 0x04)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 style="font-size:var(--step-1);margin-bottom:14px">Materiais e custo estimado</h3>
+            <div class="table-wrap">
+              <table>
+                <caption>Valores pesquisados em lojas brasileiras de eletrônica, em reais, sem frete. O total soma os extremos de cada faixa.</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Item</th>
+                    <th scope="col">Qtd.</th>
+                    <th scope="col" class="cost">Custo estimado</th>
+                    <th scope="col">Observação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>LaunchPad MSP430F5529LP</td>
+                    <td>1</td>
+                    <td class="cost">R$ 150,00</td>
+                    <td>traz o LED1, os botões e o depurador integrado</td>
+                  </tr>
+                  <tr>
+                    <td>Sensor de gás MQ-2</td>
+                    <td>1</td>
+                    <td class="cost">R$ 15 – 25</td>
+                    <td>módulo com saída analógica e comparador</td>
+                  </tr>
+                  <tr>
+                    <td>Buzzer</td>
+                    <td>1</td>
+                    <td class="cost">R$ 5 – 10</td>
+                    <td>acionado por PWM, sem oscilador próprio</td>
+                  </tr>
+                  <tr>
+                    <td>LCD 16×2 com módulo I²C</td>
+                    <td>1</td>
+                    <td class="cost">R$ 15 – 30</td>
+                    <td>backpack PCF8574, quatro fios no total</td>
+                  </tr>
+                  <tr>
+                    <td>Resistores (10 kΩ + 18 kΩ do divisor, 1 kΩ de base)</td>
+                    <td>3</td>
+                    <td class="cost">R$ 0,40</td>
+                    <td>divisor 5 V → 3,21 V do sensor e base do transistor do buzzer (opcional)</td>
+                  </tr>
+                  <tr>
+                    <td>Protoboard e jumpers</td>
+                    <td>1 conjunto</td>
+                    <td class="cost">R$ 20,00</td>
+                    <td>montagem sem solda</td>
+                  </tr>
+                  <tr>
+                    <td>LED1</td>
+                    <td>1</td>
+                    <td class="cost">incluso</td>
+                    <td>já existe na LaunchPad</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td>Total do protótipo</td>
+                    <td></td>
+                    <td class="cost">R$ 205,40 – 235,40</td>
+                    <td>uma unidade, com o que já tínhamos em mãos</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <p class="sample-note">
+              A LaunchPad responde por quase 70% do custo — é a peça que faz mais do
+              que o necessário aqui. Uma versão de produto trocaria o MSP430F5529
+              por um MSP430FR de 20 pinos e o LCD por um display sem backpack, ao
+              preço de mais firmware.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PESQUISA ================= -->
+  <section class="sec" id="pesquisa" style="padding-block:clamp(72px,8vw,120px)">
+    <div class="wrap sec-grid">
+      <p class="rail">n = 21 · Tally<span>10 e 11 de maio de 2026</span></p>
+
+      <div class="sec-body">
+        <div class="sec-head">
+          <h2>O que 21 pessoas disseram</h2>
+          <p>
+            Antes de escolher os componentes, aplicamos um formulário de 12 perguntas
+            em um condomínio residencial. As respostas mudaram o projeto: entraram o
+            alerta redundante, o botão de silenciamento e a meta de ser ouvido de
+            outro cômodo; ficou de fora a notificação por celular.
+          </p>
+        </div>
+
+        <dl class="stats">
+          <div class="stat">
+            <div class="value" data-stat="total_respostas">21</div>
+            <div class="frac">Tally Forms · 10 e 11 de maio de 2026</div>
+            <div class="label">respostas ao formulário de 12 perguntas</div>
+          </div>
+          <div class="stat">
+            <div class="value" data-stat="usam_botijao">86%</div>
+            <div class="frac" data-stat="usam_botijao_n">18 de 21 respostas</div>
+            <div class="label">cozinham com botijão de gás</div>
+          </div>
+          <div class="stat is-flag">
+            <div class="value" data-stat="cheiro">100%</div>
+            <div class="frac" data-stat="cheiro_n">21 de 21 citaram o cheiro</div>
+            <div class="label">identificam vazamento pelo cheiro — e só por ele</div>
+          </div>
+          <div class="stat is-flag">
+            <div class="value" data-stat="sem_detector">95%</div>
+            <div class="frac" data-stat="sem_detector_n">20 de 21 não têm nenhum detector</div>
+            <div class="label">não têm nenhum detector automático em casa</div>
+          </div>
+          <div class="stat">
+            <div class="value" data-stat="cheiro_nao_basta">81%</div>
+            <div class="frac" data-stat="cheiro_nao_basta_n">17 de 21 dizem que depende ou não basta</div>
+            <div class="label">acham que o cheiro não basta em toda situação</div>
+          </div>
+          <div class="stat">
+            <div class="value" data-stat="outros_comodos">95%</div>
+            <div class="frac" data-stat="outros_comodos_n">20 de 21 querem ouvir de outros cômodos</div>
+            <div class="label">querem ouvir o alarme em outros cômodos</div>
+          </div>
+          <div class="stat">
+            <div class="value" data-stat="silenciar">71%</div>
+            <div class="frac" data-stat="silenciar_n">15 de 21 acharam o botão útil</div>
+            <div class="label">achariam útil um botão de silenciar</div>
+          </div>
+          <div class="stat">
+            <div class="value" data-stat="combinacao">62%</div>
+            <div class="frac" data-stat="combinacao_n">13 de 21 preferem combinação</div>
+            <div class="label">preferem combinação de alertas a um só tipo</div>
+          </div>
+        </dl>
+
+        <blockquote class="quote">
+          <p>
+            “Uma moradora relatou dificuldade para perceber o cheiro de gás. Houve
+            um vazamento no fogão que ficou sem ser identificado por um período, e
+            só foi percebido quando o técnico foi trocar o botijão.”
+          </p>
+          <footer>
+            Relato registrado no formulário — o problema que originou o projeto:
+            depender do olfato justamente de quem pode não sentir o cheiro.
+          </footer>
+        </blockquote>
+
+        <div class="priority-grid">
+          <div class="priority">
+            <h3>Onde instalariam</h3>
+            <p>Cada pessoa citou em média 1,5 locais. Menções e fatia dos 21 respondentes.</p>
+            <div class="table-wrap table-wrap--limpo">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Local</th>
+                    <th scope="col">Menções</th>
+                    <th scope="col">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="is-top" data-local="Na cozinha em geral">
+                    <td>Na cozinha em geral</td><td class="n">13</td><td class="pct">62%</td>
+                  </tr>
+                  <tr data-local="Próximo ao botijão">
+                    <td>Próximo ao botijão</td><td class="n">8</td><td class="pct">38%</td>
+                  </tr>
+                  <tr data-local="Próximo ao fogão">
+                    <td>Próximo ao fogão</td><td class="n">6</td><td class="pct">29%</td>
+                  </tr>
+                  <tr data-local="Em vários cômodos">
+                    <td>Em vários cômodos</td><td class="n">3</td><td class="pct">14%</td>
+                  </tr>
+                  <tr data-local="Próximo ao teto">
+                    <td>Próximo ao teto</td><td class="n">2</td><td class="pct">10%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="priority">
+            <h3>O que mais valorizam</h3>
+            <p>Pergunta de múltipla escolha: a soma das menções passa de 21 de propósito.</p>
+            <div class="table-wrap table-wrap--limpo">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Característica</th>
+                    <th scope="col">Menções</th>
+                    <th scope="col">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="is-top" data-carac="Facilidade de instalação">
+                    <td>Facilidade de instalação</td><td class="n">17</td><td class="pct">81%</td>
+                  </tr>
+                  <tr class="is-top" data-carac="Aviso sonoro">
+                    <td>Aviso sonoro</td><td class="n">15</td><td class="pct">71%</td>
+                  </tr>
+                  <tr data-carac="Baixo custo">
+                    <td>Baixo custo</td><td class="n">12</td><td class="pct">57%</td>
+                  </tr>
+                  <tr data-carac="Integração com celular">
+                    <td>Integração com celular</td><td class="n">12</td><td class="pct">57%</td>
+                  </tr>
+                  <tr data-carac="Simplicidade">
+                    <td>Simplicidade</td><td class="n">10</td><td class="pct">48%</td>
+                  </tr>
+                  <tr data-carac="Tamanho reduzido">
+                    <td>Tamanho reduzido</td><td class="n">10</td><td class="pct">48%</td>
+                  </tr>
+                  <tr data-carac="Baixo consumo de energia">
+                    <td>Baixo consumo de energia</td><td class="n">10</td><td class="pct">48%</td>
+                  </tr>
+                  <tr data-carac="Aviso visual">
+                    <td>Aviso visual</td><td class="n">7</td><td class="pct">33%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="gallery">
+          <figure>
+            <img src="assets/img/grafico-01-tipo-de-gas.png" width="2096" height="1135" loading="lazy" decoding="async"
+                 alt="Gráfico de barras: 18 respostas usam botijão de gás e 3 usam gás encanado.">
+            <figcaption>
+              <span class="fig-id">Figura 1</span>
+              Tipo de gás na casa dos respondentes — 18 dos 21 cozinham com botijão.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="assets/img/grafico-02-frequencia.png" width="2204" height="1135" loading="lazy" decoding="async"
+                 alt="Gráfico de barras: 18 pessoas usam o fogão várias vezes ao dia e 3 uma vez ao dia.">
+            <figcaption>
+              <span class="fig-id">Figura 2</span>
+              Frequência de uso do fogão — para 18 pessoas, o gás faz parte da rotina várias vezes ao dia.
+            </figcaption>
+          </figure>
+
+          <figure class="is-wide">
+            <img src="assets/img/grafico-03-vazamento.png" width="3385" height="1120" loading="lazy" decoding="async"
+                 alt="Dois gráficos: 11 pessoas já presenciaram ou suspeitaram de vazamento; 20 não possuem detector automático.">
+            <figcaption>
+              <span class="fig-id">Figura 3</span>
+              Metade já conviveu com suspeita de vazamento e 20 dos 21 não têm nenhum detector — o vazio que o projeto ocupa.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="assets/img/grafico-04-deteccao.png" width="2817" height="1181" loading="lazy" decoding="async"
+                 alt="Gráfico de barras: o cheiro foi citado por 21 pessoas, mudança na chama por 2, som por 1 e outro por 1.">
+            <figcaption>
+              <span class="fig-id">Figura 4</span>
+              Como identificam um vazamento — o cheiro aparece em 21 de 21 respostas; chama e som são pistas raras.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="assets/img/grafico-05-cheiro.png" width="2306" height="1089" loading="lazy" decoding="async"
+                 alt="Gráfico de barras: 10 respostas dizem que depende da situação, 7 que o cheiro não basta e 4 que basta.">
+            <figcaption>
+              <span class="fig-id">Figura 5</span>
+              “Só o cheiro basta?” — 17 das 21 respostas dizem que depende da situação ou que não basta.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="assets/img/grafico-06-alertas.png" width="2676" height="1228" loading="lazy" decoding="async"
+                 alt="Gráfico de barras: combinação de todos os elementos 8, som 6, combinação de som e luz 5, mensagem em tela 1, luz 1.">
+            <figcaption>
+              <span class="fig-id">Figura 6</span>
+              Alerta mais útil — as combinações somam 13 preferências contra 7 de som ou luz isolados.
+            </figcaption>
+          </figure>
+
+          <figure class="is-wide">
+            <img src="assets/img/grafico-07-silenciar.png" width="3263" height="1060" loading="lazy" decoding="async"
+                 alt="Dois gráficos: 20 pessoas consideram importante ou muito importante ouvir o alarme em outros cômodos; 15 acham o botão de silenciar útil.">
+            <figcaption>
+              <span class="fig-id">Figura 7</span>
+              Alarme audível longe e botão de silenciar: 20 querem ouvir de outro cômodo, 15 acham útil poder calar.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="assets/img/grafico-08-locais.png" width="2485" height="1181" loading="lazy" decoding="async"
+                 alt="Gráfico de barras de locais de instalação: cozinha em geral 13, próximo ao botijão 8, próximo ao fogão 6, vários cômodos 3, próximo ao teto 2.">
+            <figcaption>
+              <span class="fig-id">Figura 8</span>
+              Onde instalar — a cozinha em geral lidera, seguida do botijão e do fogão, os pontos onde o gás vaza.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="assets/img/grafico-09-caracteristicas.png" width="2869" height="1366" loading="lazy" decoding="async"
+                 alt="Gráfico de barras: facilidade de instalação 17, aviso sonoro 15, baixo custo 12, integração com celular 12, simplicidade 10, tamanho reduzido 10, baixo consumo 10, aviso visual 7.">
+            <figcaption>
+              <span class="fig-id">Figura 9</span>
+              Características valorizadas — instalação fácil e aviso sonoro na frente, com baixo custo e celular empatados.
+            </figcaption>
+          </figure>
+        </div>
+
+        <p class="sample-note">
+          <strong>Como ler esses números:</strong> a amostra é de conveniência — 21
+          respostas compartilhadas no condomínio do pesquisador e com pessoas
+          próximas, não uma amostra probabilística. Perguntas de múltipla escolha
+          permitem mais de uma marcação, então a soma das menções passa de 21. A
+          idade só passou a ser coletada a partir da quinta resposta, e o perfil
+          ficou mais jovem (mediana de 21 anos) do que o público que mais precisa
+          do aparelho.
+        </p>
+        <p class="sample-note mono" id="fonte-dados">Números embutidos na página.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CÓDIGO ================= -->
+  <section class="sec" id="codigo" style="padding-block:clamp(72px,8vw,120px)">
+    <div class="wrap sec-grid">
+      <p class="rail">adc12 + decisão<span>firmware em C</span></p>
+
+      <div class="sec-body">
+        <div class="sec-head">
+          <h2>O laço que decide o alarme</h2>
+          <p>
+            Trechos do firmware real do projeto — pinos centralizados em
+            <span class="mono">config.h</span>, tom no buzzer passivo e a regra de
+            decisão que roda igual no MSP430 e nos testes de PC. É a mesma regra que
+            o simulador desta página executa: ler, comparar com 1500, acionar as
+            saídas, rearmar o silenciamento.
+          </p>
+        </div>
+
+        <div class="code-shell">
+          <div class="code-head">
+            <span>config.h · buzzer.c · app.c · main.c · botao.c</span>
+            <span>MSP430F5529LP · CCStudio</span>
+          </div>
+          <pre><code id="firmware">/* ------------------------------------------------------------------
+ * config.h — fonte única dos pinos, do limiar e dos tons
+ * ------------------------------------------------------------------ */
+#define PORTA_ADC            6      /* P6.0 = A0 (sensor MQ-2)      */
+#define PORTA_BUZZER         2      /* P2.4 = saída do Timer A2     */
+#define PORTA_BOTAO          2      /* P2.1 = botão de silenciamento */
+#define PORTA_LED            1      /* P1.0 = LED1 da LaunchPad     */
+#define LIMIAR_GAS_ADC       1500u  /* limiar prático de bancada    */
+#define BUZZER_PERIODO_CCR0  1000u  /* SMCLK 1 MHz / 1000 = 1 kHz   */
+#define BUZZER_CCR1_ALARME   500u   /* 50% de duty => tom audível   */
+#define BUZZER_CCR1_REPOUSO  1000u  /* >= período => saída alta, mudo */
+#define LED_DIR_REG          P1DIR  /* LED1 como saída digital      */
+#define LED_OUT_REG          P1OUT  /* nível alto = LED aceso       */
+#define LED_PIN_BIT          BIT0
+
+/* ------------------------------------------------------------------
+ * buzzer.c — tom de ~1 kHz no P2.4, canal TA2.1 do Timer A2
+ * ------------------------------------------------------------------ */
+void buzzer_inicia(void)
+{
+    P2DIR |= BIT4;                        /* P2.4 como saída          */
+    P2SEL |= BIT4;                        /* P2.4 na função do TA2    */
+    TA2CTL   = TASSEL_2 | MC_1 | TACLR;   /* SMCLK, modo "up"         */
+    TA2CCR0  = BUZZER_PERIODO_CCR0 - 1u;  /* fecha o período          */
+    TA2CCTL1 = OUTMOD_7;                  /* reset/set: PWM no TA2.1  */
+    TA2CCR1  = BUZZER_CCR1_REPOUSO;       /* começa mudo              */
+}
+
+void buzzer_tom(uint16_t ccr1)            /* 500 = tom, 1000 = silêncio */
+{
+    TA2CCR1 = ccr1;
+}
+
+/* ------------------------------------------------------------------
+ * app.c — a regra de decisão (testada no PC, a mesma do alvo)
+ * ------------------------------------------------------------------ */
+app_decisao_t app_avalia(app_estado_t *estado, uint16_t nivel_adc)
+{
+    app_decisao_t decisao;
+
+    if (nivel_adc &gt; (uint16_t)LIMIAR_GAS_ADC) {   /* estritamente maior */
+        if (estado-&gt;mutado == 0u) {
+            decisao.situacao     = APP_ALERTA;
+            decisao.tom_buzzer   = BUZZER_CCR1_ALARME;
+            decisao.mensagem_lcd = "ALERTA DE GAS!";
+        } else {
+            decisao.situacao     = APP_ALERTA_MUTADO;
+            decisao.tom_buzzer   = BUZZER_CCR1_REPOUSO;   /* calado */
+            decisao.mensagem_lcd = "ALERTA (MUTADO)";
+        }
+        /* Segurança: o LED fica aceso enquanto houver risco, inclusive com
+         * o buzzer silenciado. O botão cala o SOM, nunca o aviso visual. */
+        decisao.led_alarme = 1u;
+    } else {
+        estado-&gt;mutado       = 0u;       /* rearme automático do mute */
+        decisao.situacao     = APP_SEGURO;
+        decisao.tom_buzzer   = BUZZER_CCR1_REPOUSO;
+        decisao.led_alarme   = 0u;
+        decisao.mensagem_lcd = "Ambiente Seguro";
+    }
+
+    return decisao;
+}
+
+/* ------------------------------------------------------------------
+ * main.c — laço principal (~2 s por volta)
+ * ------------------------------------------------------------------ */
+    LED_DIR_REG |= LED_PIN_BIT;           /* P1.0 = LED1 como saída   */
+    LED_OUT_REG &amp;= (uint8_t)~LED_PIN_BIT;
+
+    for (;;) {
+        uint16_t nivel;
+        app_decisao_t d;
+        char linha1[LCD_TAM_LINHA];
+
+        /* 1. botão primeiro: uma pressão confirmada já silencia neste ciclo */
+        if (botao_pressao_confirmada() != 0u) {
+            app_mutar(&amp;estado);
+        }
+
+        /* 2. só então lê o sensor e decide */
+        nivel = adc_le_valor();                 /* P6.0 / A0            */
+        d     = app_avalia(&amp;estado, nivel);
+
+        formata_linha_gas(nivel, linha1);       /* "Nivel Gas: NNNN"    */
+        buzzer_tom(d.tom_buzzer);
+
+        if (d.led_alarme != 0u) {
+            LED_OUT_REG |= LED_PIN_BIT;         /* LED1 aceso           */
+        } else {
+            LED_OUT_REG &amp;= (uint8_t)~LED_PIN_BIT;  /* LED1 apagado     */
+        }
+
+        lcd_escreve_linha(0u, linha1);
+        lcd_escreve_linha(1u, d.mensagem_lcd);
+
+        __delay_cycles(APP_CICLOS_ENTRE_LEITURAS);
+    }
+
+/* ------------------------------------------------------------------
+ * botao.c — interrupção de P2.1 (pull-up interno, borda de descida)
+ * ------------------------------------------------------------------ */
+#pragma vector = PORT2_VECTOR
+__interrupt void ISR_Botao_Mute(void)
+{
+    switch (P2IV) {                        /* ler P2IV já limpa a flag */
+        case BOTAO_P2IV_VALOR:             /* P2.1 => P2IV = 0x04      */
+            botao_evento = 1u;
+            break;
+        default:
+            break;                         /* outro pino: ignora       */
+    }
+}</code></pre>
+        </div>
+
+        <ul class="code-notes">
+          <li>
+            <strong>O limiar não é ppm.</strong> 1500 foi ajustado em bancada, com o
+            sensor em ar limpo e exposto a gás de cozinha a poucos centímetros. É um
+            corte que funciona, não uma medida calibrada de concentração. O
+            <span class="mono">config.h</span> ainda guarda o valor teórico do
+            relatório (1,65 V ⇒ 2048 contagens), com o nome explícito, para a
+            divergência ficar rastreável.
+          </li>
+          <li>
+            <strong>16 colunas mandam no texto.</strong> O valor sai sempre com
+            quatro dígitos (<span class="mono">"Nivel Gas: NNNN"</span>, 15
+            caracteres) e as frases de estado foram escolhidas para caber sem cortar:
+            “ALERTA (MUTADO)” tem 15. A linha inteira é reescrita a cada volta, com
+            espaços de preenchimento, para não sobrar texto da leitura anterior.
+          </li>
+          <li>
+            <strong>O botão não desliga o alarme.</strong> Ele só marca o
+            silenciamento; o sistema volta ao estado armado quando a leitura cai para
+            1500 ou menos — o mesmo comportamento do simulador. O botão é conferido
+            no <em>início</em> da volta, então o mute já vale para a leitura daquele
+            ciclo, sem esperar os ~2 s do atraso. A interrupção é curta (só sinaliza)
+            e o debounce de 20 ms roda no laço principal. No firmware o botão
+            silencia em qualquer momento; aqui, na página, ele fica desabilitado
+            quando não há alarme para calar.
+          </li>
+          <li>
+            <strong>O buzzer é passivo e vive no Timer A2.</strong> O tom não é
+            ligado por <span class="mono">digitalWrite</span>: o canal TA2.1 gera a
+            onda no P2.4 (SMCLK de 1 MHz ÷ 1000 = ~1 kHz, duty de 50% com
+            <span class="mono">OUTMOD_7</span>). Para calar, o firmware joga
+            <span class="mono">TA2CCR1</span> para 1000 — acima do período, a saída
+            fica sempre alta e o buzzer para de oscilar.
+          </li>
+          <li>
+            <strong>O LED1 em P1.0 indica risco, não som</strong> — ele acende junto
+            com o alarme e <em>continua aceso</em> quando o buzzer está silenciado: o
+            mute corta o som, nunca o aviso visual. É o alerta redundante que a
+            pesquisa pediu. Já o pisca da segunda linha é um recurso desta página para
+            chamar atenção: o firmware reescreve a linha inteira a cada ciclo, sem
+            piscar.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LIMITAÇÕES ================= -->
+  <section class="sec" id="limitacoes" style="padding-block:clamp(72px,8vw,120px)">
+    <div class="wrap sec-grid">
+      <p class="rail">o que ficou de fora<span>sem maquiagem</span></p>
+
+      <div class="sec-body">
+        <div class="sec-head">
+          <h2>Limitações e aprendizados</h2>
+          <p>
+            Um projeto de disciplina tem prazo e orçamento. Estas são as três
+            fronteiras que o protótipo ainda não cruzou — e o que aprendemos em cada
+            uma delas.
+          </p>
+        </div>
+
+        <div class="limits">
+          <article class="limit">
+            <span class="tag">calibração</span>
+            <h3>O MQ-2 não dá ppm de graça</h3>
+            <p>
+              A resposta do sensor não é linear, muda com umidade e temperatura e
+              precisa de burn-in de 24 a 48 horas antes de estabilizar. O limiar de
+              1500 é um corte prático: percebe o aumento de gás no ar, mas não mede
+              concentração. Sem calibração com gás de referência, não dá para afirmar
+              a quantos ppm o alarme dispara — e o relatório diz isso com todas as
+              letras.
+            </p>
+          </article>
+
+          <article class="limit">
+            <span class="tag">escopo</span>
+            <h3>Sem aviso no celular</h3>
+            <p>
+              Integração com celular ficou entre as características mais citadas
+              (12 menções, empatada com baixo custo), mas exigiria módulo Wi-Fi ou
+              GSM, mais firmware, mais consumo e mais custo. Registramos como próximo
+              passo em vez de prometer o que o protótipo não faz.
+            </p>
+          </article>
+
+          <article class="limit">
+            <span class="tag">mecânica</span>
+            <h3>Ainda vive numa protoboard</h3>
+            <p>
+              Falta a caixa: precisa de ventilação para o sensor respirar, abertura
+              para o som do buzzer e proteção contra respingos de gordura da cozinha.
+              Como está, o conjunto não pode ficar instalado em definitivo perto do
+              fogão — e a alimentação ainda depende do cabo USB.
+            </p>
+          </article>
+        </div>
+
+        <div class="next">
+          <h3>O que faríamos a seguir</h3>
+          <ul>
+            <li>Imprimir uma caixa em 3D com grelha de ventilação e janela para o LCD.</li>
+            <li>Calibrar o MQ-2 com gás de referência e guardar a curva em tabela no firmware.</li>
+            <li>Trocar o F5529 por um MSP430FR de 20 pinos e alimentar por pilhas, deixando o aparelho sem cabo.</li>
+            <li>Guardar o histórico de picos na memória não volátil para mostrar quando o alarme disparou.</li>
+            <li>Repetir a pesquisa com mais respostas e com o público idoso, que é quem mais precisa do aviso.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= RODAPÉ ================= -->
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <h2>Projeto final de Laboratório de Sistemas Microprocessados</h2>
+      <ul class="authors">
+        <li>Victor Hugo Guimarães Nascimento</li>
+        <li>Davi Sousa da Vinha</li>
+      </ul>
+      <p style="margin-top:22px;max-width:46ch">
+        Universidade de Brasília · Faculdade de Tecnologia · 2026/1<br>
+        Professor José Edil G. de Medeiros
+      </p>
+      <!-- Link do repositório: troque aqui se o endereço mudar. -->
+      <p style="margin-top:18px">
+        <a class="link-quiet" href="https://github.com/victorhugoguimaraes/gas-leak-detector-msp430"
+           target="_blank" rel="noopener noreferrer">Código, relatório e dados da pesquisa</a>
+      </p>
+    </div>
+
+    <div class="footer-meta">
+      <p><strong>Pesquisa de campo</strong><br>21 respostas · Tally Forms<br>10 e 11 de maio de 2026</p>
+      <p><strong>Simulador</strong><br>Limiar 1500 de 4095<br>Buzzer com gesto do usuário</p>
+    </div>
+
+    <div>
+      <img class="unb-logo" src="assets/img/logo-unb.png" width="1566" height="846"
+           alt="Universidade de Brasília" loading="lazy" decoding="async">
+    </div>
+  </div>
+
+  <div class="wrap footer-bottom">
+    <span>
+      Página sem dependências externas: abre direto do arquivo, sem servidor, sem
+      build e sem requisições de rede.
+    </span>
+    <span class="mono">web/index.html · CSS e JS locais · gráficos em assets/img</span>
+  </div>
+</footer>
+
+</body>
+</html>

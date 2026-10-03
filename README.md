@@ -103,7 +103,7 @@ Pesquisa aplicada em **maio de 2026** com moradores de um condomínio (entrevist
 | Usam botijão de gás | **86%** | O cenário é o do GLP residencial, não o de gás encanado |
 | Usam o fogão várias vezes ao dia | **86%** | Risco convive com a rotina, não é evento raro |
 | Já presenciaram ou suspeitaram de vazamento | **52%** | Mais da metade já viveu a situação de perto |
-| **Não** possuem detector automático | **95%** | Praticamente não existe detecção eletrônica nessas casas |
+| **Não** possuem detector automático | **95%** | Responderam "Não". O 1 restante respondeu "Pretendo adquirir" — ou seja, **nenhuma casa da amostra tem detecção eletrônica hoje** |
 | Identificariam vazamento **pelo cheiro** | **100%** | O olfato é *o* método — unanimidade absoluta |
 | Dizem que só o cheiro **não basta** sempre | **81%** | As próprias pessoas desconfiam do seu único método |
 | Querem o alarme audível **em outros cômodos** | **95%** | Justifica o alerta sonoro de verdade, não um bip discreto |
@@ -165,14 +165,16 @@ O gráfico abaixo ilustra a contradição central da pesquisa: **todos** usam o 
 | :--- | :--- | :--- |
 | Saída analógica do sensor | **P6.0 / A0** | Entrada do ADC12 |
 | LED1 da LaunchPad | **P1.0** | Saída digital já ligada ao LED da placa |
-| Buzzer | **P2.4 / TA2.2** | PWM via timer; transistor de acionamento se necessário |
+| Buzzer | **P2.4 / TA2.1** | PWM via Timer A2, tom de ≈1 kHz; transistor de acionamento se necessário |
 | Botão de silenciamento | **P2.1** | Pull-up interno + interrupção de porta (`P2IV == 0x04`) |
 | LCD 16x2 | **P3.0 / SDA** e **P3.1 / SCL** | Interface I2C, pull-ups em 3,3 V |
 | GND do sensor e periféricos | **GND** | Referência comum obrigatória |
 
 ⚠️ **Atenção elétrica:** o MSP430F5529 opera em **3,3 V**. A entrada do ADC não pode receber tensão acima disso. Se o módulo do sensor for alimentado em 5 V, use um **divisor resistivo** (por exemplo 10 kΩ / 18 kΩ, que reduz 5 V para ≈3,21 V) antes de ligar em P6.0. O mesmo vale para os pull-ups do módulo I2C do LCD: devem ir para **3,3 V**, nunca 5 V.
 
-> O relatório teórico do projeto especifica buzzer em **P2.0/TA1.1** e botão **S2 em P1.1**. A implementação real, que é o padrão deste repositório, usa **P2.4/TA2.2** e **P2.1**. A divergência está documentada em [`docs/engenharia.md`](docs/engenharia.md) e é reversível alterando `config.h` — não foi "corrigida" para não alterar um protótipo que foi efetivamente montado e funcionou.
+> O relatório teórico do projeto especifica buzzer em **P2.0/TA1.1** e botão **S2 em P1.1**. A implementação real, que é o padrão deste repositório, usa **P2.4/TA2.1** e **P2.1**. A divergência está documentada em [`docs/engenharia.md`](docs/engenharia.md) e é reversível alterando `config.h` — não foi "corrigida" para não alterar um protótipo que foi efetivamente montado e funcionou.
+>
+> **Tom do buzzer:** o relatório planejava ~2 kHz (`CCR0 = 499`). O código que rodou na bancada usa `TA2CCR0 = 999`, o que dá **≈1 kHz**. O valor real foi mantido por fidelidade ao protótipo, e a diferença está registrada em [`firmware/README.md`](firmware/README.md).
 
 ## Como o firmware funciona
 
@@ -189,25 +191,40 @@ O código foi organizado em módulos com responsabilidades separadas, em vez de 
 | `app.c` | **A lógica de decisão** — onde mora a regra de negócio |
 | `main.c` | Apenas orquestra: configura, inicializa e roda o laço |
 
-O trecho abaixo é o coração do sistema (versão modular; o arquivo original do projeto está preservado em [`firmware/original/`](firmware/original/)):
+O trecho abaixo é o coração do sistema, copiado de [`firmware/src/app.c`](firmware/src/app.c) (o arquivo original do projeto está preservado em [`firmware/original/`](firmware/original/)):
 
 ```c
-/* app.c — decisão de alarme, sem depender de hardware */
-estado_alarme_t app_avaliar_leitura(uint16_t nivel_adc, uint8_t *mutado)
+app_decisao_t app_avalia(app_estado_t *estado, uint16_t nivel_adc)
 {
-    estado_alarme_t estado;
+    app_decisao_t decisao;
 
-    if (nivel_adc > LIMIAR_GAS_ADC) {
-        /* acima do limiar: risco detectado */
-        estado = (*mutado) ? ALARME_MUTADO : ALARME_ATIVO;
+    if (app_acima_do_limiar(nivel_adc) != 0u) {
+        if (estado->mutado == 0u) {
+            decisao.situacao     = APP_ALERTA;
+            decisao.tom_buzzer   = (uint16_t)BUZZER_CCR1_ALARME;
+            decisao.mensagem_lcd = "ALERTA DE GAS!";
+        } else {
+            decisao.situacao     = APP_ALERTA_MUTADO;
+            decisao.tom_buzzer   = (uint16_t)BUZZER_CCR1_REPOUSO;
+            decisao.mensagem_lcd = "ALERTA (MUTADO)";
+        }
+        /* Decisao de seguranca: o LED permanece aceso enquanto houver risco,
+         * inclusive com o buzzer silenciado. */
+        decisao.led_alarme = 1u;
     } else {
-        /* voltou ao normal: rearma o silenciamento automaticamente */
-        *mutado = 0;
-        estado = AMBIENTE_SEGURO;
+        estado->mutado       = 0u;   /* rearme automatico do mute */
+        decisao.situacao     = APP_SEGURO;
+        decisao.tom_buzzer   = (uint16_t)BUZZER_CCR1_REPOUSO;
+        decisao.led_alarme   = 0u;
+        decisao.mensagem_lcd = "Ambiente Seguro";
     }
-    return estado;
+
+    decisao.mutado = estado->mutado;
+    return decisao;
 }
 ```
+
+A comparação usa `app_acima_do_limiar()`, que é **estritamente maior** (`nivel_adc > LIMIAR_GAS_ADC`): exatamente 1500 ainda é considerado seguro, igual ao protótipo que rodou na bancada.
 
 Essa separação tem um motivo prático: **a regra de decisão pode ser testada em um PC**, sem MSP430, sem bancada e sem sensor. É o que o diretório [`firmware/sim/`](firmware/sim/) faz — reproduz a mesma lógica de decisão e roda casos de teste (abaixo do limiar, exatamente no limiar, acima, silenciado, rearme após queda, formatação das 16 colunas do LCD).
 
@@ -283,8 +300,20 @@ O sketch original funcionava — mas foi escrito em uma sessão só, sem revisã
 | 6 | Limiar `LIMIAR_GAS` espalhado e com nome ambíguo, sem indicar que é valor de ADC | Renomeado para `LIMIAR_GAS_ADC` e centralizado em `config.h` |
 | 7 | Uso de `int` (16 bits com sinal) para o resultado do ADC, que é naturalmente `uint16_t` | Tipos ajustados |
 | 8 | Tratamento de NACK no I2C incompleto em relação ao esperado pelo periférico | Sequência START/ACK e liberação do barramento revisadas |
+| 9 | O LED1 (P1.0) era citado no relatório mas **nunca configurado** — o alerta visual não existia no código | `P1.0` passa a ser dirigido: aceso acima do limiar, inclusive com o buzzer silenciado |
 
-**A lógica de comportamento não foi alterada** — limiar, mensagens, modo mutado e rearme continuam idênticos ao protótipo que rodou na bancada. As correções atacam bugs e legibilidade, não o comportamento.
+**O que mudou de comportamento** (e só isso):
+
+1. **O LED1 passou a existir.** Antes não havia alerta visual nenhum, apesar do relatório descrevê-lo.
+2. **A ordem do laço foi corrigida.** Na primeira versão da refatoração o botão era verificado no *fim* da volta, depois da escrita do LCD e antes do `__delay_cycles` de ~2 s. Isso atrasava o silenciamento: uma pressão confirmada só valia na volta seguinte, ou seja, o buzzer ainda tocava por até um ciclo inteiro antes de calar. O botão voltou a ser verificado **no início da volta**, como no sketch original, para que o mute valha já na leitura em que foi confirmado. Foi um problema real que só apareceu na revisão do código, e é um bom exemplo de por que refatorar sem reler o original com atenção é arriscado.
+
+Fora esses dois pontos, limiar (1500, com comparação estritamente maior), os tons (500 no alarme, 1000 no repouso), as três mensagens, o rearme automático do mute e o formato `Nivel Gas: NNNN` são **idênticos** ao protótipo que rodou na bancada.
+
+### O que os testes cobrem — e o que não cobrem
+
+O simulador em [`firmware/sim/`](firmware/sim/) roda **128 verificações em C** (e 119 no fallback em Python) sobre `app.c` e `texto.c`, que são compilados para o PC com `-DSIM_HOST` — os mesmos arquivos do firmware. Isso prova a lógica de decisão, a formatação das 16 colunas e o comportamento do LED.
+
+O que **não** está coberto: os drivers de hardware (`i2c.c`, `lcd.c`, `adc.c`, `buzzer.c`, `botao.c`, `main.c`) e o `botao.c` em particular. Eles foram revisados linha a linha contra o sketch original, mas **não passaram por compilador** neste repositório, porque o toolchain do MSP430 não estava disponível. O debounce do botão, por exemplo, é lógica de tempo que só a bancada (ou um teste com timer simulado) valida de verdade.
 
 ## Limitações e honestidade técnica
 
